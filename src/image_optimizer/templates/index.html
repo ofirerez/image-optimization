@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Optimizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f4f8;
+            color: #334155;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.3rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 2px dashed #94a3b8;
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            margin-bottom: 1.5rem;
+            background: #fff;
+        }
+
+        .drop-zone:hover {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+
+        .drop-zone.dragover {
+            border-color: #6366f1;
+            background: #e0e7ff;
+            transform: scale(1.01);
+        }
+
+        .drop-zone.has-file {
+            padding: 1.2rem;
+            border-style: solid;
+            border-color: #c7d2fe;
+            background: #f5f3ff;
+        }
+
+        .drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.6rem; display: block; }
+        .drop-zone-text { font-size: 1.05rem; color: #334155; font-weight: 500; margin-bottom: 0.4rem; }
+        .drop-zone-text span { color: #6366f1; text-decoration: underline; font-weight: 600; }
+        .drop-zone-hint { font-size: 0.82rem; color: #94a3b8; }
+        .drop-zone input[type="file"] { display: none; }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            justify-content: center;
+            font-size: 0.92rem;
+        }
+        .file-info .name { font-weight: 600; color: #334155; }
+        .file-info .dims { color: #64748b; }
+        .file-info .change-btn {
+            color: #6366f1;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Settings panel */
+        .settings {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: none;
+        }
+
+        .settings.visible { display: block; }
+
+        .settings-header {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1e293b;
+            margin-bottom: 0.3rem;
+        }
+
+        .settings-subheader {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 1.2rem;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem 2rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .control-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .control-hint {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .slider-row input[type="range"] {
+            flex: 1;
+            accent-color: #6366f1;
+            height: 6px;
+        }
+
+        .slider-value {
+            min-width: 3.2rem;
+            text-align: right;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        /* Preset buttons */
+        .preset-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .preset-btn {
+            flex: 1;
+            padding: 0.6rem 0.6rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .preset-btn small {
+            display: block;
+            font-weight: 400;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .preset-btn:hover { border-color: #c7d2fe; background: #eef2ff; }
+
+        .preset-btn.active {
+            border-color: #6366f1;
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+        .preset-btn.active small { color: #818cf8; }
+
+        /* Toggle switch */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: #cbd5e1;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-track::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+
+        .toggle input:checked + .toggle-track { background: #6366f1; }
+        .toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+
+        .toggle-label { font-size: 0.92rem; color: #334155; }
+
+        /* Settings summary + action */
+        .settings-footer {
+            margin-top: 1.2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-text {
+            font-size: 0.85rem;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .summary-text strong { color: #334155; }
+
+        .optimize-btn {
+            padding: 0.7rem 2rem;
+            background: #6366f1;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .optimize-btn:hover { background: #4f46e5; }
+        .optimize-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+        /* Status */
+        .status {
+            text-align: center;
+            padding: 0.8rem 1.2rem;
+            border-radius: 10px;
+            margin-bottom: 1.2rem;
+            display: none;
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+        .status.error { display: block; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .status.loading { display: block; background: #eef2ff; color: #6366f1; border: 1px solid #c7d2fe; }
+        .status.success { display: block; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+        /* Panels */
+        .panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .panel {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .panel-header {
+            padding: 0.8rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+
+        .panel-header .label { color: #334155; }
+        .panel-header .meta { color: #94a3b8; font-weight: 400; font-size: 0.82rem; }
+
+        .panel-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            padding: 1rem;
+        }
+
+        .panel-body img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .placeholder {
+            color: #94a3b8;
+            font-size: 0.92rem;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .placeholder-icon { font-size: 2.2rem; display: block; margin-bottom: 0.5rem; opacity: 0.6; }
+
+        /* Savings badge */
+        .savings-badge {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .savings-badge.good { background: #dcfce7; color: #15803d; }
+        .savings-badge.neutral { background: #fef9c3; color: #a16207; }
+        .savings-badge.bad { background: #fee2e2; color: #dc2626; }
+
+        /* Action buttons under panels */
+        .panel-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .panel-action-btn {
+            padding: 0.4rem 0.9rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            color: #475569;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .panel-action-btn:hover { border-color: #6366f1; color: #4f46e5; background: #eef2ff; }
+
+        .panel-action-btn.primary {
+            background: #6366f1;
+            color: #fff;
+            border-color: #6366f1;
+        }
+        .panel-action-btn.primary:hover { background: #4f46e5; }
+
+        /* Metadata panel */
+        .metadata-panel {
+            display: none;
+            margin-top: 1.5rem;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .metadata-panel.visible { display: block; }
+
+        .metadata-header {
+            padding: 0.8rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metadata-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0 0.3rem;
+        }
+        .metadata-close:hover { color: #475569; }
+
+        .metadata-body {
+            padding: 1rem 1.2rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .metadata-table th {
+            text-align: left;
+            padding: 0.4rem 0.8rem 0.4rem 0;
+            color: #64748b;
+            font-weight: 600;
+            white-space: nowrap;
+            vertical-align: top;
+            width: 35%;
+        }
+
+        .metadata-table td {
+            padding: 0.4rem 0;
+            color: #334155;
+            word-break: break-all;
+        }
+
+        .metadata-table tr + tr {
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .metadata-section {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 0.8rem 0 0.4rem;
+        }
+
+        .metadata-section:first-child { padding-top: 0; }
+
+        @media (max-width: 750px) {
+            .panels { grid-template-columns: 1fr; }
+            .settings-grid { grid-template-columns: 1fr; }
+            .container { padding: 1.5rem 1rem; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Optimizer</h1>
+        <p class="subtitle">Shrink your images while keeping them looking great</p>
+
+        <div class="status" id="status"></div>
+
+        <div class="drop-zone" id="dropZone">
+            <span class="drop-zone-icon">&#x1F4F7;</span>
+            <div class="drop-zone-text">Drag &amp; drop your image here, or <span>browse files</span></div>
+            <div class="drop-zone-hint">JPEG, PNG, and WebP up to 25 MB</div>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp">
+        </div>
+
+        <div class="settings" id="settings">
+            <div class="settings-header">Compression Settings</div>
+            <div class="settings-subheader">Choose how aggressively to compress your image</div>
+            <div class="settings-grid">
+                <div class="control-group">
+                    <div class="control-label">
+                        Compression Mode
+                    </div>
+                    <div class="preset-group" id="presetGroup">
+                        <button class="preset-btn" data-preset="aggressive" data-quality="60">
+                            Aggressive
+                            <small>Smallest file</small>
+                        </button>
+                        <button class="preset-btn active" data-preset="balanced" data-quality="80">
+                            Balanced
+                            <small>Recommended</small>
+                        </button>
+                        <button class="preset-btn" data-preset="lossless" data-quality="95">
+                            Lossless
+                            <small>Max fidelity</small>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        Quality
+                        <span class="control-hint" id="qualityHint">— lower = smaller file</span>
+                    </div>
+                    <div class="slider-row">
+                        <input type="range" id="qualitySlider" min="1" max="95" value="80">
+                        <span class="slider-value" id="qualityValue">80</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        Scale
+                        <span class="control-hint">— reduce dimensions to save more</span>
+                    </div>
+                    <div class="slider-row">
+                        <input type="range" id="resizeSlider" min="10" max="200" value="100">
+                        <span class="slider-value" id="resizeValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">Metadata</div>
+                    <div class="toggle-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="stripToggle" checked>
+                            <span class="toggle-track"></span>
+                        </label>
+                        <span class="toggle-label">Strip metadata (saves extra bytes)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-footer">
+                <div class="summary-text" id="summaryText"></div>
+                <button class="optimize-btn" id="optimizeBtn">Compress Image</button>
+            </div>
+        </div>
+
+        <div class="panels">
+            <div class="panel" id="beforePanel">
+                <div class="panel-header">
+                    <span class="label">Original</span>
+                    <span class="meta" id="beforeMeta"></span>
+                </div>
+                <div class="panel-body" id="beforeBody">
+                    <div class="placeholder">
+                        <span class="placeholder-icon">&#x1F5BC;</span>
+                        Your original image will appear here
+                    </div>
+                </div>
+                <div class="panel-actions" id="beforeActions" style="display:none">
+                    <button class="panel-action-btn" id="metadataBtn">View Metadata</button>
+                </div>
+            </div>
+            <div class="panel" id="afterPanel">
+                <div class="panel-header">
+                    <span class="label">Compressed</span>
+                    <span class="meta" id="afterMeta"></span>
+                </div>
+                <div class="panel-body" id="afterBody">
+                    <div class="placeholder">
+                        <span class="placeholder-icon">&#x2728;</span>
+                        Compressed version will appear here
+                    </div>
+                </div>
+                <div class="panel-actions" id="afterActions" style="display:none">
+                    <a class="panel-action-btn primary" id="downloadBtn" href="#" download>Download</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="metadata-panel" id="metadataPanel">
+            <div class="metadata-header">
+                <span>Original Image Metadata</span>
+                <button class="metadata-close" id="metadataClose">&times;</button>
+            </div>
+            <div class="metadata-body" id="metadataBody">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var dropZone = document.getElementById("dropZone");
+        var fileInput = document.getElementById("fileInput");
+        var statusEl = document.getElementById("status");
+        var settingsEl = document.getElementById("settings");
+        var beforeBody = document.getElementById("beforeBody");
+        var beforeMeta = document.getElementById("beforeMeta");
+        var afterBody = document.getElementById("afterBody");
+        var afterMeta = document.getElementById("afterMeta");
+        var qualitySlider = document.getElementById("qualitySlider");
+        var qualityValue = document.getElementById("qualityValue");
+        var qualityHint = document.getElementById("qualityHint");
+        var resizeSlider = document.getElementById("resizeSlider");
+        var resizeValue = document.getElementById("resizeValue");
+        var presetGroup = document.getElementById("presetGroup");
+        var stripToggle = document.getElementById("stripToggle");
+        var optimizeBtn = document.getElementById("optimizeBtn");
+        var summaryText = document.getElementById("summaryText");
+
+        var ALLOWED_EXT = ["jpg", "jpeg", "png", "webp"];
+        var MAX_SIZE = 25 * 1024 * 1024;
+
+        var beforeActions = document.getElementById("beforeActions");
+        var afterActions = document.getElementById("afterActions");
+        var downloadBtn = document.getElementById("downloadBtn");
+        var metadataBtn = document.getElementById("metadataBtn");
+        var metadataPanel = document.getElementById("metadataPanel");
+        var metadataBody = document.getElementById("metadataBody");
+        var metadataClose = document.getElementById("metadataClose");
+
+        var uploadedFile = null;
+
+        // Metadata panel events
+        metadataBtn.addEventListener("click", loadMetadata);
+        metadataClose.addEventListener("click", function () {
+            metadataPanel.classList.remove("visible");
+        });
+
+        // Drop zone events
+        dropZone.addEventListener("click", function () { fileInput.click(); });
+        dropZone.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); dropZone.classList.add("dragover"); });
+        dropZone.addEventListener("dragleave", function (e) { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove("dragover"); });
+        dropZone.addEventListener("drop", function (e) {
+            e.preventDefault(); e.stopPropagation(); dropZone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener("change", function () {
+            if (fileInput.files.length > 0) { handleFile(fileInput.files[0]); fileInput.value = ""; }
+        });
+
+        // Settings events
+        qualitySlider.addEventListener("input", updateSummary);
+        resizeSlider.addEventListener("input", updateSummary);
+        stripToggle.addEventListener("change", updateSummary);
+
+        presetGroup.addEventListener("click", function (e) {
+            var btn = e.target.closest(".preset-btn");
+            if (!btn) return;
+            presetGroup.querySelectorAll(".preset-btn").forEach(function (b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+            var suggestedQ = parseInt(btn.getAttribute("data-quality"));
+            qualitySlider.value = suggestedQ;
+            updateSummary();
+        });
+
+        optimizeBtn.addEventListener("click", runOptimize);
+
+        function showStatus(msg, type) { statusEl.textContent = msg; statusEl.className = "status " + type; }
+        function clearStatus() { statusEl.className = "status"; statusEl.textContent = ""; }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + " B";
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+            return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+        }
+
+        function getPreset() {
+            var active = presetGroup.querySelector(".preset-btn.active");
+            return active ? active.getAttribute("data-preset") : "balanced";
+        }
+
+        function updateSummary() {
+            var q = parseInt(qualitySlider.value);
+            var r = parseInt(resizeSlider.value);
+            var strip = stripToggle.checked;
+            var preset = getPreset();
+            var ext = uploadedFile ? uploadedFile.ext : "";
+
+            qualityValue.textContent = q;
+            resizeValue.textContent = r + "%";
+
+            var isPng = (ext === "png");
+            if (isPng) {
+                qualityHint.textContent = "— PNG uses lossless compression";
+            } else {
+                qualityHint.textContent = "— lower = smaller file";
+            }
+
+            var estimatedReduction = "";
+            if (!isPng) {
+                var baseReduction = Math.round((95 - q) * 0.8);
+                if (r < 100) baseReduction += Math.round((100 - r) * 0.5);
+                if (strip) baseReduction += 3;
+                baseReduction = Math.min(95, Math.max(0, baseReduction));
+                estimatedReduction = " &middot; Est. ~<strong>" + baseReduction + "%</strong> smaller";
+            }
+
+            var parts = [];
+            parts.push("Quality <strong>" + q + "</strong>");
+            if (r !== 100) parts.push("Scale <strong>" + r + "%</strong>");
+            parts.push("Mode <strong>" + preset + "</strong>");
+            if (strip) parts.push("Metadata <strong>stripped</strong>");
+            summaryText.innerHTML = parts.join(" &middot; ") + estimatedReduction;
+        }
+
+        function handleFile(file) {
+            clearStatus();
+            var nameParts = file.name.split(".");
+            var ext = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : "";
+            if (ALLOWED_EXT.indexOf(ext) === -1) {
+                showStatus("Unsupported file type. Please upload JPEG, PNG, or WebP.", "error");
+                return;
+            }
+            if (file.size > MAX_SIZE) {
+                showStatus("File too large. Maximum size is 25 MB.", "error");
+                return;
+            }
+
+            showStatus("Uploading...", "loading");
+
+            var formData = new FormData();
+            formData.append("file", file);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/upload", true);
+            xhr.onload = function () {
+                var data;
+                try { data = JSON.parse(xhr.responseText); } catch (e) {
+                    showStatus("Upload failed — unexpected server response.", "error"); return;
+                }
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    clearStatus();
+                    uploadedFile = data;
+                    uploadedFile.ext = ext;
+                    showUploadedState();
+                } else {
+                    showStatus(data.error || "Upload failed.", "error");
+                }
+            };
+            xhr.onerror = function () { showStatus("Network error — could not reach the server.", "error"); };
+            xhr.send(formData);
+        }
+
+        function showUploadedState() {
+            dropZone.classList.add("has-file");
+            dropZone.innerHTML =
+                '<div class="file-info">' +
+                    '<span class="name">' + escapeHtml(uploadedFile.original_name) + '</span>' +
+                    '<span class="dims">' + uploadedFile.width + '&times;' + uploadedFile.height + ' &middot; ' + formatSize(uploadedFile.size) + '</span>' +
+                    '<span class="change-btn">Change file</span>' +
+                '</div>' +
+                '<input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp" style="display:none">';
+
+            fileInput = document.getElementById("fileInput");
+            dropZone.removeEventListener("click", dropZoneClick);
+            dropZone.addEventListener("click", dropZoneClick);
+            fileInput.addEventListener("change", function () {
+                if (fileInput.files.length > 0) { handleFile(fileInput.files[0]); fileInput.value = ""; }
+            });
+
+            beforeBody.innerHTML = '<img src="' + uploadedFile.url + '" alt="Original">';
+            beforeMeta.textContent = uploadedFile.width + "×" + uploadedFile.height + " · " + formatSize(uploadedFile.size);
+            beforeActions.style.display = "flex";
+
+            afterBody.innerHTML = '<div class="placeholder"><span class="placeholder-icon">&#x2728;</span>Click Compress Image to optimize</div>';
+            afterMeta.textContent = "";
+            afterActions.style.display = "none";
+            metadataPanel.classList.remove("visible");
+
+            settingsEl.classList.add("visible");
+            updateSummary();
+        }
+
+        function dropZoneClick() { fileInput.click(); }
+
+        function runOptimize() {
+            if (!uploadedFile) return;
+
+            optimizeBtn.disabled = true;
+            optimizeBtn.textContent = "Compressing...";
+            showStatus("Compressing image...", "loading");
+
+            var body = JSON.stringify({
+                filename: uploadedFile.filename,
+                quality: parseInt(qualitySlider.value),
+                resize_percent: parseInt(resizeSlider.value),
+                strip_metadata: stripToggle.checked,
+                preset: getPreset()
+            });
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/optimize", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function () {
+                optimizeBtn.disabled = false;
+                optimizeBtn.textContent = "Compress Image";
+                var data;
+                try { data = JSON.parse(xhr.responseText); } catch (e) {
+                    showStatus("Compression failed — unexpected response.", "error"); return;
+                }
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    showOptimizedResult(data);
+                } else {
+                    showStatus(data.error || "Compression failed.", "error");
+                }
+            };
+            xhr.onerror = function () {
+                optimizeBtn.disabled = false;
+                optimizeBtn.textContent = "Compress Image";
+                showStatus("Network error — could not reach the server.", "error");
+            };
+            xhr.send(body);
+        }
+
+        function showOptimizedResult(data) {
+            var savings = data.savings_percent;
+            var savingsClass = savings > 0 ? "good" : (savings === 0 ? "neutral" : "bad");
+            var savingsLabel = savings > 0
+                ? ("−" + savings + "% smaller")
+                : (savings === 0 ? "Same size" : ("+" + Math.abs(savings) + "% larger"));
+
+            var statusMsg = savings > 0
+                ? ("Compressed! " + formatSize(data.original.size) + " → " + formatSize(data.optimized.size) + " (" + savingsLabel + ")")
+                : ("Done. " + savingsLabel);
+
+            showStatus(statusMsg, savings > 0 ? "success" : "loading");
+
+            afterBody.innerHTML = '<img src="' + data.optimized.url + '?t=' + Date.now() + '" alt="Compressed">';
+            afterMeta.innerHTML =
+                data.optimized.width + "×" + data.optimized.height +
+                " · " + formatSize(data.optimized.size) +
+                ' <span class="savings-badge ' + savingsClass + '">' + savingsLabel + '</span>';
+
+            downloadBtn.href = "/api/download/" + data.optimized.filename;
+            downloadBtn.download = data.optimized.filename;
+            afterActions.style.display = "flex";
+        }
+
+        function loadMetadata() {
+            if (!uploadedFile) return;
+            metadataPanel.classList.add("visible");
+            metadataBody.innerHTML = "<em>Loading metadata...</em>";
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/api/metadata/" + uploadedFile.filename, true);
+            xhr.onload = function () {
+                var data;
+                try { data = JSON.parse(xhr.responseText); } catch (e) {
+                    metadataBody.innerHTML = "<em>Could not load metadata.</em>"; return;
+                }
+                if (xhr.status !== 200) {
+                    metadataBody.innerHTML = "<em>" + (data.error || "Failed") + "</em>"; return;
+                }
+                renderMetadata(data);
+            };
+            xhr.onerror = function () { metadataBody.innerHTML = "<em>Network error.</em>"; };
+            xhr.send();
+        }
+
+        function renderMetadata(data) {
+            var html = '<div class="metadata-section">File Info</div>';
+            html += '<table class="metadata-table">';
+            html += '<tr><th>Format</th><td>' + (data.format || "Unknown") + '</td></tr>';
+            html += '<tr><th>Color Mode</th><td>' + (data.mode || "Unknown") + '</td></tr>';
+            html += '<tr><th>Dimensions</th><td>' + data.width + ' × ' + data.height + ' px</td></tr>';
+            html += '<tr><th>File Size</th><td>' + formatSize(data.size_bytes) + '</td></tr>';
+
+            if (data.extra) {
+                var extraKeys = Object.keys(data.extra);
+                for (var i = 0; i < extraKeys.length; i++) {
+                    html += '<tr><th>' + escapeHtml(extraKeys[i]) + '</th><td>' + escapeHtml(String(data.extra[extraKeys[i]])) + '</td></tr>';
+                }
+            }
+            html += '</table>';
+
+            if (data.exif && Object.keys(data.exif).length > 0) {
+                html += '<div class="metadata-section">EXIF Data</div>';
+                html += '<table class="metadata-table">';
+                var exifKeys = Object.keys(data.exif).sort();
+                for (var j = 0; j < exifKeys.length; j++) {
+                    var val = data.exif[exifKeys[j]];
+                    var display = (typeof val === "object") ? JSON.stringify(val) : String(val);
+                    if (display.length > 200) display = display.substring(0, 200) + "...";
+                    html += '<tr><th>' + escapeHtml(exifKeys[j]) + '</th><td>' + escapeHtml(display) + '</td></tr>';
+                }
+                html += '</table>';
+            } else {
+                html += '<div class="metadata-section">EXIF Data</div>';
+                html += '<p style="color:#94a3b8;font-size:0.85rem;">No EXIF data found in this image.</p>';
+            }
+
+            metadataBody.innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            var div = document.createElement("div");
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
