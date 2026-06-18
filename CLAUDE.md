@@ -46,6 +46,10 @@ Uses Gunicorn with 4 workers on port 8000.
 └── requirements.txt
 ```
 
+## Rules
+
+- Always ask for explicit user permission before pushing to any remote (git push, gh pr create, etc.)
+
 ## Key conventions
 
 - App factory pattern: `src.image_optimizer.create_app()`
